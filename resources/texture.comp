@@ -1,0 +1,44 @@
+#version 430
+
+// theses values get reassign at compile time
+#define l_size_x 1
+#define l_size_y 1
+#define l_size_z 1
+
+layout(local_size_x=l_size_x, local_size_y=l_size_y, local_size_z=l_size_z) in;
+
+layout(rgba32f, location=0) restrict uniform image2D texture;
+
+uniform int width;
+uniform int height;
+
+void main()
+{
+	const ivec2 texelPos = ivec2(gl_GlobalInvocationID.xy);
+	if (texelPos.x > width || texelPos.y > height)
+		return;
+
+	float texel = imageLoad(texture, texelPos).r;
+
+	float sum = 0.0;
+	for (int offsetY = -1 ; offsetY <= 1 ; ++offsetY) {
+		for (int offsetX = -1 ; offsetX <= 1 ; ++offsetX) {
+			int sampleX = texelPos.x + offsetX;
+			int sampleY = texelPos.y + offsetY;
+
+			if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
+				sum += imageLoad(texture, ivec2(sampleX, sampleY)).r;
+			}
+		}
+	}
+	float blur = sum / 9;
+
+	float diffusedValue = mix(texel, blur, 0.1);
+
+	// evaporation
+	const float decay = 0.002;
+	float result = max(0, diffusedValue - decay);
+	vec4 newTexel = vec4(result, 0, 0, 1);
+
+	imageStore(texture, texelPos, newTexel);
+}
