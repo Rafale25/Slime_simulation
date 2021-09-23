@@ -22,8 +22,11 @@ layout(std430, binding=0) buffer buf_ants {
 uniform int nb_agent;
 
 uniform float speed;
-// uniform float steerStrength;
-// uniform float wanderStrength;
+uniform float steerStrength;
+uniform float wanderStrength;
+uniform float sensorAngleSpacing;
+uniform int sensorSize;
+uniform int sensorDistance;
 
 uniform int timer;
 
@@ -59,6 +62,33 @@ vec2 random_uniform_vec2(uint seed) {
 	return vec2(cos(angle), sin(angle));
 }
 
+float sense(Agent agent, float sensorAngleOffset) {
+	float angle = atan(agent.dir.y, agent.dir.x);
+
+	float sensorAngle = angle + sensorAngleOffset;
+	vec2 sensorDir = vec2(cos(sensorAngle), sin(sensorAngle));
+	ivec2 sensorCenter = ivec2(agent.pos + sensorDir * sensorDistance);
+
+	float sum = 0.0;
+
+	for (int offsetY = -sensorSize ; offsetY <= sensorSize ; ++offsetY) {
+		for (int offsetX = -sensorSize ; offsetX <= sensorSize ; ++offsetX) {
+			ivec2 pos = sensorCenter + ivec2(offsetX, offsetY);
+
+			// check if pos is in texture bounds
+			if (pos.x >= 0 && pos.x < texture_width && pos.y >= 0 && pos.y < texture_height)
+				sum += imageLoad(texture, pos).r;
+		}
+	}
+	return sum;
+}
+
+vec2 turn(vec2 dir, float angle) {
+	const float newX = dir.x * cos(angle) - dir.y * sin(angle);
+	const float newY = dir.x * sin(angle) + dir.y * cos(angle);
+	return vec2(newX, newY);
+}
+
 void main()
 {
 	const uint id = gl_GlobalInvocationID.z * gl_NumWorkGroups.y * gl_NumWorkGroups.x +
@@ -67,23 +97,45 @@ void main()
 
 	if (id >= nb_agent) return;
 
-	Agent agent = Buf_agents.agents[id];
-
-	// maximum randomness using multiple values
+	const Agent agent = Buf_agents.agents[id];
 	const uint seed = hash(timer + id);
 
-	vec2 newPos = agent.pos + agent.dir * speed;
+	// steer base on sensory data //
+	float weightForward = sense(agent, 0);
+	float weightLeft = sense(agent, sensorAngleSpacing);
+	float weightRight = sense(agent, -sensorAngleSpacing);
 
-	// if agent get outside of map
+	const float randomSteerStrength = random_uniform(seed);
+
+	// continue forward
+	if (weightForward > weightLeft && weightForward > weightRight) {
+		// do nothing
+	}
+	// turn randomly
+	else if (weightForward < weightLeft && weightForward < weightRight) {
+		const float angle = (randomSteerStrength - 0.5) * 2 * steerStrength;
+		Buf_agents.agents[id].dir = turn(agent.dir, angle);
+	}
+	// turn right
+	else if (weightRight > weightLeft) {
+		const float angle = randomSteerStrength * steerStrength;
+		Buf_agents.agents[id].dir = turn(agent.dir, -angle);
+	}
+	// turn left
+	else if (weightLeft > weightRight) {
+		const float angle = randomSteerStrength * steerStrength;
+		Buf_agents.agents[id].dir = turn(agent.dir, angle);
+	}
+
+	vec2 newPos = agent.pos + agent.dir * speed;
+	// if agent get outside of map //
 	if (newPos.x < 0 || newPos.x > texture_width || newPos.y < 0 || newPos.y > texture_height) {
 		newPos = clamp(newPos, vec2(0.01, 0.01), vec2(texture_width - 0.01, texture_height - 0.01));
 		Buf_agents.agents[id].dir = random_uniform_vec2(seed);
 	}
-
 	Buf_agents.agents[id].pos = newPos;
-	// ----
 
-	// texture trail
+	// texture trail //
 	int x = int(agent.pos.x);
 	int y = int(agent.pos.y);
 

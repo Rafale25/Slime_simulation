@@ -27,15 +27,24 @@ def random_uniform_vec2():
 RATIO_MULT = 100
 
 class AgentConfig:
-	N = 50000
+	N = 50_000
 	speed = 1.0
-	color = (1, 1, 1)
+	steer = 0.2
+	wander = 0.2
+	sensorAngleSpacing = math.pi/4# 0 to PI/2
+	sensorSize = 3# 0 to PI/2
+	sensorDistance = 4# 0 to PI/2
+
+	# color = (1, 1, 1)
 	local_size_x = 512
 	local_size_y = 1
 	local_size_z = 1
 
 class TextureConfig:
 	size = (16*RATIO_MULT, 9*RATIO_MULT)
+	diffuse = 0.3
+	evaporation = 0.002
+
 	local_size_x = 32
 	local_size_y = 32
 	local_size_z = 1
@@ -64,7 +73,7 @@ class MyWindow(mglw.WindowConfig):
 		self.pause = False
 
 		# data = array('B', [0, 0, 0, 255] * (TextureConfig.size[0] * TextureConfig.size[1]))
-		data = array('f', [0.0, 0.0, 0.0, 1.0] * (TextureConfig.size[0] * TextureConfig.size[1]))
+		# data = array('f', [0.0, 0.0, 0.0, 1.0] * (TextureConfig.size[0] * TextureConfig.size[1]))
 
 		# for i in range(0, TextureConfig.size[1]*TextureConfig.size[0]*4, 4):
 		# 	index = int(i / 4)
@@ -84,11 +93,9 @@ class MyWindow(mglw.WindowConfig):
 		# texture
 		self.texture = self.ctx.texture(
 			size=TextureConfig.size,
-			data=data,
-			# data=array('B', [255, 0, 0, 255] * (TextureConfig.size[0] * TextureConfig.size[1])),
+			data=array('f', [0.0, 0.0, 0.0, 1.0] * (TextureConfig.size[0] * TextureConfig.size[1])),
 			components=4,
 			dtype='f4')
-			# dtype='u1')
 
 		self.texture.repeat_x, self.texture.repeat_y = False, False
 		self.texture.filter = moderngl.NEAREST, moderngl.NEAREST
@@ -128,10 +135,16 @@ class MyWindow(mglw.WindowConfig):
 		self.CS_agent['timer'] = time.time() * 1e6
 		self.CS_agent['nb_agent'] = AgentConfig.N
 		self.CS_agent['speed'] = AgentConfig.speed
+		# self.CS_agent['wanderStrength'] = AgentConfig.wander
+		self.CS_agent['steerStrength'] = AgentConfig.steer
+		self.CS_agent['sensorAngleSpacing'] = AgentConfig.sensorAngleSpacing
+		self.CS_agent['sensorSize'] = AgentConfig.sensorSize
+		self.CS_agent['sensorDistance'] = AgentConfig.sensorDistance
 
 		self.CS_texture['width'] = TextureConfig.size[0]
 		self.CS_texture['height'] = TextureConfig.size[1]
-		pass
+		self.CS_texture['diffuse'] = TextureConfig.diffuse
+		self.CS_texture['evaporation'] = TextureConfig.evaporation
 
 	def update(self, time, frametime):
 		self.update_uniforms(frametime)
@@ -176,15 +189,15 @@ class MyWindow(mglw.WindowConfig):
 	def gen_initial_ant_data(self, count):
 		for _ in range(count):
 			# position
-			yield TextureConfig.size[0]/2
-			yield TextureConfig.size[1]/2
+			vec = random_uniform_vec2()
+			dist = random.uniform(0, 200)
+			yield TextureConfig.size[0]/2 + vec[0] * dist
+			yield TextureConfig.size[1]/2 + vec[1] * dist
 
+			# direction
 			vec = random_uniform_vec2()
 			yield vec[0]
 			yield vec[1]
-
-			# yield random.uniform(-math.pi, math.pi)
-			# yield 0 # unused
 
 	# -------------------------------------------------------------------------
 	# IMGUI
@@ -195,15 +208,66 @@ class MyWindow(mglw.WindowConfig):
 		c, self.pause = imgui.checkbox("Paused", self.pause)
 
 		imgui.spacing();imgui.spacing();imgui.separator();imgui.spacing();imgui.spacing()
-		imgui.text("Agents Settings"); imgui.spacing()
 
+		imgui.text("Agents Settings"); imgui.spacing()
 		imgui.begin_group()
 		c, AgentConfig.speed = imgui.slider_float(
 			label="Speed",
 			value=AgentConfig.speed,
 			min_value=0.01,
-			max_value=10.0,
+			max_value=5.0,
 			format="%.2f")
+
+		c, AgentConfig.wander = imgui.slider_float(
+			label="WanderStrength",
+			value=AgentConfig.wander,
+			min_value=0.01,
+			max_value=5.0,
+			format="%.2f")
+
+		c, AgentConfig.steer = imgui.slider_float(
+			label="SteerStrength",
+			value=AgentConfig.steer,
+			min_value=0.01,
+			max_value=5.0,
+			format="%.2f")
+
+		c, AgentConfig.sensorAngleSpacing = imgui.slider_float(
+			label="SensorAngleSpacing",
+			value=AgentConfig.sensorAngleSpacing,
+			min_value=0.1,
+			max_value=math.pi/2,
+			format="%.2f")
+
+		c, AgentConfig.sensorSize = imgui.slider_int(
+			label="SensorSize",
+			value=AgentConfig.sensorSize,
+			min_value=1,
+			max_value=5)
+
+		c, AgentConfig.sensorDistance = imgui.slider_int(
+			label="SensorDistance",
+			value=AgentConfig.sensorDistance,
+			min_value=1,
+			max_value=10)
+
+		imgui.end_group()
+
+		imgui.text("Texture Settings"); imgui.spacing()
+		imgui.begin_group()
+		c, TextureConfig.diffuse = imgui.slider_float(
+			label="Diffuse",
+			value=TextureConfig.diffuse,
+			min_value=0.0,
+			max_value=1.0,
+			format="%.2f")
+
+		c, TextureConfig.evaporation = imgui.slider_float(
+			label="Decay",
+			value=TextureConfig.evaporation,
+			min_value=0.0,
+			max_value=0.05,
+			format="%.4f")
 		imgui.end_group()
 
 		imgui.end()

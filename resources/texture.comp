@@ -11,6 +11,8 @@ layout(rgba32f, location=0) restrict uniform image2D texture;
 
 uniform int width;
 uniform int height;
+uniform float diffuse;
+uniform float evaporation;
 
 void main()
 {
@@ -33,11 +35,11 @@ void main()
 	}
 	float blur = sum / 9;
 
-	float diffusedValue = mix(texel, blur, 0.1);
+	float diffusedValue = mix(texel, blur, diffuse);
 
 	// evaporation
-	const float decay = 0.002;
-	float result = max(0, diffusedValue - decay);
+	// const float evaporation = 0.002;
+	float result = max(0, diffusedValue - evaporation);
 	vec4 newTexel = vec4(result, 0, 0, 1);
 
 	imageStore(texture, texelPos, newTexel);
