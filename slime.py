@@ -24,7 +24,7 @@ def random_uniform_vec2():
 	angle = uniform(-math.pi, math.pi);
 	return cos(angle), sin(angle);
 
-RATIO_MULT = 120
+RATIO_MULT = 50
 
 class AgentConfig:
 	N = 10_000
