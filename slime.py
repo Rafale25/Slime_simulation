@@ -24,10 +24,10 @@ def random_uniform_vec2():
 	angle = uniform(-math.pi, math.pi);
 	return cos(angle), sin(angle);
 
-RATIO_MULT = 50
+RATIO_MULT = 120
 
 class AgentConfig:
-	N = 10_000
+	N = 50_000
 	speed = 1.0
 	steer = 0.2
 	wander = 0.2
@@ -57,8 +57,8 @@ class Camera:
 class MyWindow(mglw.WindowConfig):
 	title = "Slime Simulation"
 	gl_version = (4, 3)
-	window_size = (1280, 720)
-	fullscreen = False
+	window_size = (1920, 1080)
+	fullscreen = True
 	resizable = False
 	vsync = True
 	resource_dir = "./resources"
@@ -133,7 +133,7 @@ class MyWindow(mglw.WindowConfig):
 
 	def update_uniforms(self, frametime):
 		# self.CS_agent['timer'] =  1000000
-		self.CS_agent['timer'] = random.randint(0, 100000)
+		self.CS_agent['timer'] = random.randint(0, 1000000)
 		self.CS_agent['nb_agent'] = AgentConfig.N
 		self.CS_agent['speed'] = AgentConfig.speed
 		self.CS_agent['wanderStrength'] = AgentConfig.wander
