@@ -113,7 +113,7 @@ void main()
 	}
 	// turn randomly
 	else if (weightForward < weightLeft && weightForward < weightRight) {
-		const float angle = (randomSteerStrength - 0.5) * 2 * steerStrength;
+		const float angle = (randomSteerStrength - 0.5) * 2 * wanderStrength;
 		Buf_agents.agents[id].dir = turn(agent.dir, angle);
 	}
 	// turn right

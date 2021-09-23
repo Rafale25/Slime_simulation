@@ -24,10 +24,10 @@ def random_uniform_vec2():
 	angle = uniform(-math.pi, math.pi);
 	return cos(angle), sin(angle);
 
-RATIO_MULT = 100
+RATIO_MULT = 120
 
 class AgentConfig:
-	N = 50_000
+	N = 10_000
 	speed = 1.0
 	steer = 0.2
 	wander = 0.2
@@ -132,10 +132,11 @@ class MyWindow(mglw.WindowConfig):
 		)
 
 	def update_uniforms(self, frametime):
-		self.CS_agent['timer'] = time.time() * 1e6
+		# self.CS_agent['timer'] =  1000000
+		self.CS_agent['timer'] = random.randint(0, 100000)
 		self.CS_agent['nb_agent'] = AgentConfig.N
 		self.CS_agent['speed'] = AgentConfig.speed
-		# self.CS_agent['wanderStrength'] = AgentConfig.wander
+		self.CS_agent['wanderStrength'] = AgentConfig.wander
 		self.CS_agent['steerStrength'] = AgentConfig.steer
 		self.CS_agent['sensorAngleSpacing'] = AgentConfig.sensorAngleSpacing
 		self.CS_agent['sensorSize'] = AgentConfig.sensorSize
@@ -215,14 +216,14 @@ class MyWindow(mglw.WindowConfig):
 			label="Speed",
 			value=AgentConfig.speed,
 			min_value=0.01,
-			max_value=5.0,
+			max_value=6.0,
 			format="%.2f")
 
 		c, AgentConfig.wander = imgui.slider_float(
 			label="WanderStrength",
 			value=AgentConfig.wander,
 			min_value=0.01,
-			max_value=5.0,
+			max_value=6.0,
 			format="%.2f")
 
 		c, AgentConfig.steer = imgui.slider_float(
@@ -230,13 +231,13 @@ class MyWindow(mglw.WindowConfig):
 			value=AgentConfig.steer,
 			min_value=0.01,
 			max_value=5.0,
-			format="%.2f")
+			format="%.3f")
 
 		c, AgentConfig.sensorAngleSpacing = imgui.slider_float(
 			label="SensorAngleSpacing",
 			value=AgentConfig.sensorAngleSpacing,
 			min_value=0.1,
-			max_value=math.pi/2,
+			max_value=math.pi,
 			format="%.2f")
 
 		c, AgentConfig.sensorSize = imgui.slider_int(
@@ -249,7 +250,7 @@ class MyWindow(mglw.WindowConfig):
 			label="SensorDistance",
 			value=AgentConfig.sensorDistance,
 			min_value=1,
-			max_value=10)
+			max_value=50)
 
 		imgui.end_group()
 
