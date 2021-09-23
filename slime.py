@@ -26,7 +26,7 @@ def random_uniform_vec2():
 RATIO_MULT = 120
 
 class AgentConfig:
-	N = 50_000
+	N = 100_000
 	speed = 1.0
 	steer = 0.2
 	wander = 0.2
@@ -129,6 +129,13 @@ class MyWindow(mglw.WindowConfig):
 				"l_size_z": TextureConfig.local_size_z
 			}
 		)
+
+	def __del__(self):
+		print("Cleaning up ressources.")
+		self.shader_texture.release()
+		self.buffer_agent.release()
+		self.CS_agent.release()
+		self.CS_texture.release()
 
 	def update_uniforms(self, frametime):
 		# self.CS_agent['timer'] =  1000000
