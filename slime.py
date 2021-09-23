@@ -10,7 +10,6 @@ import pathlib
 from math import pi, cos, sin
 from random import uniform
 from array import array
-# import numpy as np
 
 import moderngl
 import imgui
