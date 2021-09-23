@@ -23,26 +23,28 @@ def random_uniform_vec2():
 	angle = uniform(-math.pi, math.pi);
 	return cos(angle), sin(angle);
 
-RATIO_MULT = 120
+RATIO_MULT = 80
 
 class AgentConfig:
 	N = 100_000
-	speed = 1.0
-	steer = 0.2
-	wander = 0.2
+	speed = 4.0
+	steer = 1.0
 	sensorAngleSpacing = math.pi/4# 0 to PI/2
-	sensorSize = 3# 0 to PI/2
-	sensorDistance = 4# 0 to PI/2
+	sensorSize = 1# 0 to PI/2
+	sensorDistance = 16
 
-	# color = (1, 1, 1)
 	local_size_x = 512
 	local_size_y = 1
 	local_size_z = 1
 
 class TextureConfig:
 	size = (16*RATIO_MULT, 9*RATIO_MULT)
-	diffuse = 0.3
-	evaporation = 0.002
+	diffuse = 0.7
+	evaporation = 0.05
+
+	color_1 = (0, 0, 0)
+	color_2 = (0, 0.5, 0)
+	color_3 = (0, 1, 0)
 
 	local_size_x = 32
 	local_size_y = 32
@@ -57,7 +59,7 @@ class MyWindow(mglw.WindowConfig):
 	title = "Slime Simulation"
 	gl_version = (4, 3)
 	window_size = (1920, 1080)
-	fullscreen = True
+	fullscreen = False
 	resizable = False
 	vsync = True
 	resource_dir = "./resources"
@@ -69,25 +71,7 @@ class MyWindow(mglw.WindowConfig):
 		self.imgui = ModernglWindowRenderer(self.wnd)
 
 		self.width, self.height = self.window_size
-		self.pause = False
-
-		# data = array('B', [0, 0, 0, 255] * (TextureConfig.size[0] * TextureConfig.size[1]))
-		# data = array('f', [0.0, 0.0, 0.0, 1.0] * (TextureConfig.size[0] * TextureConfig.size[1]))
-
-		# for i in range(0, TextureConfig.size[1]*TextureConfig.size[0]*4, 4):
-		# 	index = int(i / 4)
-		# 	x = index % (TextureConfig.size[0])
-		# 	y = int(index / (TextureConfig.size[0]))
-
-			# if x % 2 or y % 2:
-			# 	data[i + 0] = 255
-			# else:
-			# 	data[i + 1] = 255
-
-			# data[i + 0] = y%256
-			# data[i + 1] = x%256
-			# data[i + 2] = x%256
-			# data[i + 3] = 255
+		self.pause = True
 
 		# texture
 		self.texture = self.ctx.texture(
@@ -99,12 +83,10 @@ class MyWindow(mglw.WindowConfig):
 		self.texture.repeat_x, self.texture.repeat_y = False, False
 		self.texture.filter = moderngl.NEAREST, moderngl.NEAREST
 
-
 		self.quad_2d = mglw.geometry.quad_2d(
 			size=(TextureConfig.size[0], TextureConfig.size[1]),
 			pos=(TextureConfig.size[0]/2, TextureConfig.size[1]/2),
 			normals=False)
-		# self.quad_2d = mglw.geometry.quad_fs() #screen sized quad
 		self.shader_texture = self.load_program(
 			vertex_shader="./texture.vert",
 			fragment_shader="./texture.frag"
@@ -138,11 +120,9 @@ class MyWindow(mglw.WindowConfig):
 		self.CS_texture.release()
 
 	def update_uniforms(self, frametime):
-		# self.CS_agent['timer'] =  1000000
-		self.CS_agent['timer'] = random.randint(0, 1000000)
+		self.CS_agent['timer'] = (time.time() * 100000) % 2_147_483_647 # dont exceed int_max
 		self.CS_agent['nb_agent'] = AgentConfig.N
 		self.CS_agent['speed'] = AgentConfig.speed
-		self.CS_agent['wanderStrength'] = AgentConfig.wander
 		self.CS_agent['steerStrength'] = AgentConfig.steer
 		self.CS_agent['sensorAngleSpacing'] = AgentConfig.sensorAngleSpacing
 		self.CS_agent['sensorSize'] = AgentConfig.sensorSize
@@ -152,6 +132,10 @@ class MyWindow(mglw.WindowConfig):
 		self.CS_texture['height'] = TextureConfig.size[1]
 		self.CS_texture['diffuse'] = TextureConfig.diffuse
 		self.CS_texture['evaporation'] = TextureConfig.evaporation
+
+		self.shader_texture['color_1'] = TextureConfig.color_1
+		self.shader_texture['color_2'] = TextureConfig.color_2
+		self.shader_texture['color_3'] = TextureConfig.color_3
 
 	def update(self, time, frametime):
 		self.update_uniforms(frametime)
@@ -222,14 +206,7 @@ class MyWindow(mglw.WindowConfig):
 			label="Speed",
 			value=AgentConfig.speed,
 			min_value=0.01,
-			max_value=6.0,
-			format="%.2f")
-
-		c, AgentConfig.wander = imgui.slider_float(
-			label="WanderStrength",
-			value=AgentConfig.wander,
-			min_value=0.01,
-			max_value=6.0,
+			max_value=10.0,
 			format="%.2f")
 
 		c, AgentConfig.steer = imgui.slider_float(
@@ -250,13 +227,17 @@ class MyWindow(mglw.WindowConfig):
 			label="SensorSize",
 			value=AgentConfig.sensorSize,
 			min_value=1,
-			max_value=5)
+			max_value=2)
 
 		c, AgentConfig.sensorDistance = imgui.slider_int(
 			label="SensorDistance",
 			value=AgentConfig.sensorDistance,
-			min_value=1,
-			max_value=50)
+			min_value=0,
+			max_value=100)
+
+		c, TextureConfig.color_1 = imgui.color_edit3("Color 1", *TextureConfig.color_1)
+		c, TextureConfig.color_2 = imgui.color_edit3("Color 2", *TextureConfig.color_2)
+		c, TextureConfig.color_3 = imgui.color_edit3("Color 3", *TextureConfig.color_3)
 
 		imgui.end_group()
 
@@ -273,7 +254,7 @@ class MyWindow(mglw.WindowConfig):
 			label="Decay",
 			value=TextureConfig.evaporation,
 			min_value=0.0,
-			max_value=0.05,
+			max_value=0.1,
 			format="%.4f")
 		imgui.end_group()
 

@@ -23,7 +23,6 @@ uniform int nb_agent;
 
 uniform float speed;
 uniform float steerStrength;
-uniform float wanderStrength;
 uniform float sensorAngleSpacing;
 uniform int sensorSize;
 uniform int sensorDistance;
@@ -113,7 +112,7 @@ void main()
 	}
 	// turn randomly
 	else if (weightForward < weightLeft && weightForward < weightRight) {
-		const float angle = (randomSteerStrength - 0.5) * 2 * wanderStrength;
+		const float angle = (randomSteerStrength - 0.5) * 2 * steerStrength;
 		Buf_agents.agents[id].dir = turn(agent.dir, angle);
 	}
 	// turn right
