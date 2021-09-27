@@ -23,7 +23,7 @@ def random_uniform_vec2():
 	angle = uniform(-math.pi, math.pi);
 	return cos(angle), sin(angle);
 
-RATIO_MULT = 80
+RATIO_MULT = 120
 
 class AgentConfig:
 	N = 100_000
@@ -177,8 +177,6 @@ class MyWindow(mglw.WindowConfig):
 
 	# -------------------------------------------------------------------------
 	def resize_buffer(self, new_count):
-		print(new_count)
-
 		AGENT_SIZE_BYTES = 4 * 4
 		buffer = self.buffer_agent.read()[0:new_count * AGENT_SIZE_BYTES]
 
