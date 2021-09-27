@@ -30,7 +30,7 @@ class AgentConfig:
 	speed = 4.0
 	steer = 1.0
 	sensorAngleSpacing = math.pi/4# 0 to PI/2
-	sensorSize = 1# 0 to PI/2
+	# sensorSize = 1# 0 to PI/2
 	sensorDistance = 16
 
 	local_size_x = 512
@@ -58,7 +58,7 @@ class Camera:
 class MyWindow(mglw.WindowConfig):
 	title = "Slime Simulation"
 	gl_version = (4, 3)
-	window_size = (1920, 1080)
+	window_size = (Camera.ratio[0] * RATIO_MULT, Camera.ratio[1] * RATIO_MULT)
 	fullscreen = False
 	resizable = False
 	vsync = True
@@ -92,8 +92,8 @@ class MyWindow(mglw.WindowConfig):
 			fragment_shader="./texture.frag"
 		)
 
-		# agent : Vec2 position, float angle, float useless_for_padding
-		self.buffer_agent = self.ctx.buffer(array('f', self.gen_initial_ant_data(AgentConfig.N)))
+		# agent : vec2 position, vec2 direction
+		self.buffer_agent = self.ctx.buffer(array('f', self.gen_initial_data(AgentConfig.N)))
 
 		self.CS_agent = self.load_compute_shader(
 			'./agent.comp',
@@ -125,7 +125,7 @@ class MyWindow(mglw.WindowConfig):
 		self.CS_agent['speed'] = AgentConfig.speed
 		self.CS_agent['steerStrength'] = AgentConfig.steer
 		self.CS_agent['sensorAngleSpacing'] = AgentConfig.sensorAngleSpacing
-		self.CS_agent['sensorSize'] = AgentConfig.sensorSize
+		# self.CS_agent['sensorSize'] = AgentConfig.sensorSize
 		self.CS_agent['sensorDistance'] = AgentConfig.sensorDistance
 
 		self.CS_texture['width'] = TextureConfig.size[0]
@@ -176,8 +176,24 @@ class MyWindow(mglw.WindowConfig):
 		self.imgui_render()
 
 	# -------------------------------------------------------------------------
+	def resize_buffer(self, new_count):
+		print(new_count)
+
+		AGENT_SIZE_BYTES = 4 * 4
+		buffer = self.buffer_agent.read()[0:new_count * AGENT_SIZE_BYTES]
+
+		self.buffer_agent.orphan(new_count * AGENT_SIZE_BYTES)
+
+		if new_count > AgentConfig.N:
+			new_bytes = array('f', self.gen_initial_data(new_count - AgentConfig.N))
+			buffer += new_bytes
+
+		self.buffer_agent.write(buffer)
+
+		AgentConfig.N = new_count
+
 	# data initialization
-	def gen_initial_ant_data(self, count):
+	def gen_initial_data(self, count):
 		for _ in range(count):
 			# position
 			vec = random_uniform_vec2()
@@ -202,6 +218,14 @@ class MyWindow(mglw.WindowConfig):
 
 		imgui.text("Agents Settings"); imgui.spacing()
 		imgui.begin_group()
+		c, new_N = imgui.slider_int(
+			label="N",
+			value=AgentConfig.N,
+			min_value=1,
+			max_value=1_000_000)
+		if c:
+			self.resize_buffer(new_N)
+
 		c, AgentConfig.speed = imgui.slider_float(
 			label="Speed",
 			value=AgentConfig.speed,
@@ -223,11 +247,11 @@ class MyWindow(mglw.WindowConfig):
 			max_value=math.pi,
 			format="%.2f")
 
-		c, AgentConfig.sensorSize = imgui.slider_int(
-			label="SensorSize",
-			value=AgentConfig.sensorSize,
-			min_value=1,
-			max_value=2)
+		# c, AgentConfig.sensorSize = imgui.slider_int(
+		# 	label="SensorSize",
+		# 	value=AgentConfig.sensorSize,
+		# 	min_value=1,
+		# 	max_value=2)
 
 		c, AgentConfig.sensorDistance = imgui.slider_int(
 			label="SensorDistance",

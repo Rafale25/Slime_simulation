@@ -68,17 +68,19 @@ float sense(Agent agent, float sensorAngleOffset) {
 	vec2 sensorDir = vec2(cos(sensorAngle), sin(sensorAngle));
 	ivec2 sensorCenter = ivec2(agent.pos + sensorDir * sensorDistance);
 
-	float sum = 0.0;
+	// float sum = 0.0;
+	float sum = imageLoad(texture, sensorCenter).g;
 
-	for (int offsetY = -sensorSize ; offsetY <= sensorSize ; ++offsetY) {
-		for (int offsetX = -sensorSize ; offsetX <= sensorSize ; ++offsetX) {
-			ivec2 pos = sensorCenter + ivec2(offsetX, offsetY);
-
-			// check if pos is in texture bounds
-			if (pos.x >= 0 && pos.x < texture_width && pos.y >= 0 && pos.y < texture_height)
-				sum += imageLoad(texture, pos).r;
-		}
-	}
+	// remove this and pre-compute it in texture.comp
+	// for (int offsetY = -1 ; offsetY <= 1 ; ++offsetY) {
+	// 	for (int offsetX = -1 ; offsetX <= 1 ; ++offsetX) {
+	// 		ivec2 pos = sensorCenter + ivec2(offsetX, offsetY);
+	//
+	// 		// check if pos is in texture bounds
+	// 		if (pos.x >= 0 && pos.x < texture_width && pos.y >= 0 && pos.y < texture_height)
+	// 			sum += imageLoad(texture, pos).r;
+	// 	}
+	// }
 	return sum;
 }
 
@@ -135,11 +137,8 @@ void main()
 	Buf_agents.agents[id].pos = newPos;
 
 	// texture trail //
-	int x = int(agent.pos.x);
-	int y = int(agent.pos.y);
-
-	ivec2 texelPos = ivec2(x, y);
-	vec4 texel = vec4(imageLoad(texture, texelPos).rgba);
-	vec4 newTexel = vec4(1, 0, 0, 1);
+	ivec2 texelPos = ivec2(agent.pos);
+	const vec4 texel = vec4(imageLoad(texture, texelPos).rgba);
+	vec4 newTexel = vec4(1.0, texel.g, texel.b, texel.a);
 	imageStore(texture, texelPos, newTexel);
 }

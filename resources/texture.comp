@@ -23,13 +23,13 @@ void main()
 	float texel = imageLoad(texture, texelPos).r;
 
 	float sum = 0.0;
+
 	for (int offsetY = -1 ; offsetY <= 1 ; ++offsetY) {
 		for (int offsetX = -1 ; offsetX <= 1 ; ++offsetX) {
-			int sampleX = texelPos.x + offsetX;
-			int sampleY = texelPos.y + offsetY;
+			ivec2 pos = texelPos + ivec2(offsetX, offsetY);
 
-			if (sampleX >= 0 && sampleX < width && sampleY >= 0 && sampleY < height) {
-				sum += imageLoad(texture, ivec2(sampleX, sampleY)).r;
+			if (pos.x >= 0 && pos.x < width && pos.y >= 0 && pos.y < height) {
+				sum += imageLoad(texture, pos).r;
 			}
 		}
 	}
@@ -37,10 +37,8 @@ void main()
 
 	float diffusedValue = mix(texel, blur, diffuse);
 
-	// evaporation
-	// const float evaporation = 0.002;
 	float result = max(0, diffusedValue - evaporation);
-	vec4 newTexel = vec4(result, 0, 0, 1);
+	vec4 newTexel = vec4(result, sum, 0, 1);
 
 	imageStore(texture, texelPos, newTexel);
 }
