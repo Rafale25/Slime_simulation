@@ -1,14 +1,12 @@
 #! /usr/bin/python3
 
 import sys
-import math
 import random
 import struct
 import time
 import pathlib
 
-from math import pi, cos, sin
-from random import uniform
+import math
 from array import array
 
 import moderngl
@@ -19,41 +17,9 @@ import moderngl_window as mglw
 # from moderngl_window.conf import settings
 from moderngl_window.integrations.imgui import ModernglWindowRenderer
 
-def random_uniform_vec2():
-	angle = uniform(-math.pi, math.pi);
-	return cos(angle), sin(angle);
+from utils import *
 
-RATIO_MULT = 120
-
-class AgentConfig:
-	N = 100_000
-	speed = 4.0
-	steer = 1.0
-	sensorAngleSpacing = math.pi/4# 0 to PI/2
-	# sensorSize = 1# 0 to PI/2
-	sensorDistance = 16
-
-	local_size_x = 512
-	local_size_y = 1
-	local_size_z = 1
-
-class TextureConfig:
-	size = (16*RATIO_MULT, 9*RATIO_MULT)
-	diffuse = 0.7
-	evaporation = 0.05
-
-	color_1 = (0, 0, 0)
-	color_2 = (0, 0.5, 0)
-	color_3 = (0, 1, 0)
-
-	local_size_x = 32
-	local_size_y = 32
-	local_size_z = 1
-
-class Camera:
-	center = [0, 0]
-	ratio = (16, 9)
-	zoom = 80.0
+from _config import *
 
 class MyWindow(mglw.WindowConfig):
 	title = "Slime Simulation"
@@ -72,6 +38,9 @@ class MyWindow(mglw.WindowConfig):
 
 		self.width, self.height = self.window_size
 		self.pause = True
+
+		self.agent_config = AgentConfig()
+		self.profiles = []
 
 		# texture
 		self.texture = self.ctx.texture(
@@ -100,7 +69,7 @@ class MyWindow(mglw.WindowConfig):
 			{
 				"texture_width": TextureConfig.size[0],
 				"texture_height": TextureConfig.size[1],
-				"l_size_x": AgentConfig.local_size_x,
+				"l_size_x": 512,
 			}
 		)
 		self.CS_texture = self.load_compute_shader(
@@ -112,6 +81,8 @@ class MyWindow(mglw.WindowConfig):
 			}
 		)
 
+		self.load_profiles("profiles.txt")
+
 	def __del__(self):
 		print("Cleaning up ressources.")
 		self.shader_texture.release()
@@ -119,14 +90,15 @@ class MyWindow(mglw.WindowConfig):
 		self.CS_agent.release()
 		self.CS_texture.release()
 
+	from _profile import load_profiles, set_profile
+
 	def update_uniforms(self, frametime):
 		self.CS_agent['timer'] = (time.time() * 100000) % 2_147_483_647 # dont exceed int_max
-		self.CS_agent['nb_agent'] = AgentConfig.N
-		self.CS_agent['speed'] = AgentConfig.speed
-		self.CS_agent['steerStrength'] = AgentConfig.steer
-		self.CS_agent['sensorAngleSpacing'] = AgentConfig.sensorAngleSpacing
-		# self.CS_agent['sensorSize'] = AgentConfig.sensorSize
-		self.CS_agent['sensorDistance'] = AgentConfig.sensorDistance
+		self.CS_agent['nb_agent'] = self.agent_config.N
+		self.CS_agent['speed'] = self.agent_config.speed
+		self.CS_agent['steerStrength'] = self.agent_config.steer
+		self.CS_agent['sensorAngleSpacing'] = self.agent_config.sensorAngleSpacing
+		self.CS_agent['sensorDistance'] = self.agent_config.sensorDistance
 
 		self.CS_texture['width'] = TextureConfig.size[0]
 		self.CS_texture['height'] = TextureConfig.size[1]
@@ -143,7 +115,7 @@ class MyWindow(mglw.WindowConfig):
 		self.texture.bind_to_image(0, read=True, write=True)
 
 		self.CS_agent.run(
-			group_x=AgentConfig.N // AgentConfig.local_size_x + 1,
+			group_x=AgentConfig.N // 512 + 1,
 			group_y=1,
 			group_z=1
 		)
@@ -160,12 +132,6 @@ class MyWindow(mglw.WindowConfig):
 
 		self.ctx.clear(0.5, 0.5, 0.5)
 
-		# modelview = glm.ortho(
-		# 	Camera.center[0] - Camera.ratio[0]/2 * Camera.zoom,
-		# 	Camera.center[0] + Camera.ratio[0]/2 * Camera.zoom,
-		# 	Camera.center[1] - Camera.ratio[1]/2 * Camera.zoom,
-		# 	Camera.center[1] + Camera.ratio[1]/2 * Camera.zoom,
-		# 	-1, 1)
 		modelview = glm.ortho(0, TextureConfig.size[0], 0, TextureConfig.size[1], -1, 1)
 		self.shader_texture['modelview'].write(modelview)
 
@@ -218,42 +184,36 @@ class MyWindow(mglw.WindowConfig):
 		imgui.begin_group()
 		c, new_N = imgui.slider_int(
 			label="N",
-			value=AgentConfig.N,
+			value=self.agent_config.N,
 			min_value=1,
 			max_value=1_000_000)
 		if c:
 			self.resize_buffer(new_N)
 
-		c, AgentConfig.speed = imgui.slider_float(
+		c, self.agent_config.speed = imgui.slider_float(
 			label="Speed",
-			value=AgentConfig.speed,
+			value=self.agent_config.speed,
 			min_value=0.01,
 			max_value=10.0,
 			format="%.2f")
 
-		c, AgentConfig.steer = imgui.slider_float(
+		c, self.agent_config.steer = imgui.slider_float(
 			label="SteerStrength",
-			value=AgentConfig.steer,
+			value=self.agent_config.steer,
 			min_value=0.01,
 			max_value=5.0,
 			format="%.3f")
 
-		c, AgentConfig.sensorAngleSpacing = imgui.slider_float(
+		c, self.agent_config.sensorAngleSpacing = imgui.slider_float(
 			label="SensorAngleSpacing",
-			value=AgentConfig.sensorAngleSpacing,
+			value=self.agent_config.sensorAngleSpacing,
 			min_value=0.1,
 			max_value=math.pi,
 			format="%.2f")
 
-		# c, AgentConfig.sensorSize = imgui.slider_int(
-		# 	label="SensorSize",
-		# 	value=AgentConfig.sensorSize,
-		# 	min_value=1,
-		# 	max_value=2)
-
-		c, AgentConfig.sensorDistance = imgui.slider_int(
+		c, self.agent_config.sensorDistance = imgui.slider_int(
 			label="SensorDistance",
-			value=AgentConfig.sensorDistance,
+			value=self.agent_config.sensorDistance,
 			min_value=0,
 			max_value=100)
 
@@ -278,6 +238,13 @@ class MyWindow(mglw.WindowConfig):
 			min_value=0.0,
 			max_value=0.1,
 			format="%.4f")
+		imgui.end_group()
+
+		imgui.begin_group()
+		for profile in self.profiles:
+			if (imgui.button(profile)):
+				self.set_profile(self.profiles[profile])
+
 		imgui.end_group()
 
 		imgui.end()

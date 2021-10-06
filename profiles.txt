@@ -1,0 +1,11 @@
+[Default]
+speed=4.0
+steer=1.0
+sensorAngleSpacing=0.78539816339
+sensorDistance=16
+
+[profile1]
+speed=4.37
+steer=0.79
+sensorAngleSpacing=2.0
+sensorDistance=88
