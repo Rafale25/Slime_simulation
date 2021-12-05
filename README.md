@@ -3,5 +3,5 @@ Slime/blob simulation inspired by Sebastian Lague's video https://www.youtube.co
 Here's a video of the program
 https://www.youtube.com/watch?v=KZuMHmU_23Q
 
-![Alt text](./screenshots/screenshots1.png?raw=true)
-![Alt text](./screenshots/screenshots2.png?raw=true)
+![Alt text](./screenshots/screenshot1.png?raw=true)
+![Alt text](./screenshots/screenshot2.png?raw=true)
