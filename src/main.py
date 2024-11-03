@@ -23,7 +23,7 @@ class MyWindow(mglw.WindowConfig):
     fullscreen = False
     resizable = True
     vsync = True
-    resource_dir = (Path(__file__) / "../resources").resolve()
+    resource_dir = (Path(__file__) / "../../resources").resolve()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -245,6 +245,8 @@ class MyWindow(mglw.WindowConfig):
     # EVENTS
     def resize(self, width: int, height: int):
         self.imgui.resize(width, height)
+        # self.camera.projection.update(aspect_ratio=self.wnd.aspect_ratio)
+        pass
 
     def key_event(self, key, action, modifiers):
         self.imgui.key_event(key, action, modifiers)
